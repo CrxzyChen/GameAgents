@@ -62,17 +62,25 @@ class PPO:
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         return advantages.tolist(), state_rewards
 
-    def train(self, max_iter=1000, target_step=1000, batch_size=64, repeat_times=10, lr=1e-4, save_iter=100):
+    def train(self, max_iter=1000, target_step=1000, batch_size=64, repeat_times=10, lr=1e-4, save_iter=100,
+              save_dir='.'):
+        os.makedirs(save_dir, exist_ok=True)
+
+        actor_best_checkpoint_path = os.path.join(save_dir, 'actor_best.pth')
+        critic_best_checkpoint_path = os.path.join(save_dir, 'critic_best.pth')
+        actor_checkpoint_path = os.path.join(save_dir, 'actor.pth')
+        critic_checkpoint_path = os.path.join(save_dir, 'critic.pth')
+
         actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
         critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=lr)
         critic_criterion = torch.nn.SmoothL1Loss()
         device = self.device
-        if os.path.exists('actor.pth'):
+        if os.path.exists(actor_checkpoint_path):
             print('Load model from actor.pth')
-            self.actor.load_state_dict(torch.load('actor.pth'))
-        if os.path.exists('critic.pth'):
+            self.actor.load_state_dict(torch.load(actor_checkpoint_path))
+        if os.path.exists(critic_checkpoint_path):
             print('Load model from critic.pth')
-            self.critic.load_state_dict(torch.load('critic.pth'))
+            self.critic.load_state_dict(torch.load(critic_checkpoint_path))
         best_score = -0.5
         for i in range(max_iter):
 
@@ -128,12 +136,12 @@ class PPO:
 
             if scores > best_score:
                 best_score = scores
-                torch.save(self.actor.state_dict(), 'best_actor.pth')
-                torch.save(self.critic.state_dict(), 'best_critic.pth')
+                torch.save(self.actor.state_dict(), actor_best_checkpoint_path)
+                torch.save(self.critic.state_dict(), critic_best_checkpoint_path)
 
             if i % save_iter == 0:
-                torch.save(self.actor.state_dict(), 'actor.pth')
-                torch.save(self.critic.state_dict(), 'critic.pth')
+                torch.save(self.actor.state_dict(), actor_checkpoint_path)
+                torch.save(self.critic.state_dict(), critic_checkpoint_path)
 
     def test(self, game_rounds=20):
         self.actor.eval()

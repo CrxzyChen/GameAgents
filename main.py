@@ -1,25 +1,44 @@
-import torch
+import argparse
+import os
 
-from games import SnakeGame
-from models.assist import CriticNetwork, ActorNetwork
-from reforcing import PPO
+import yaml
+
+from uilts.loader import module_instance
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--train', type=str, help='Name to greet')
+parser.add_argument('--test', type=str, help='Name to greet')
 
 
 def main():
-    width = 16
-    height = 16
-    actor_output_dim = 4
-    critic_output_dim = 1
-    env = SnakeGame(width, height)
-    state_dim = width * height * 3
-    hidden_dim = state_dim * 4
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    critic = CriticNetwork(state_dim, hidden_dim, critic_output_dim).to(device)
-    actor = ActorNetwork(state_dim, hidden_dim, actor_output_dim).to(device)
-    ppo = PPO(env, critic, actor, device=device, gamma=0.99, reward_scale=1)
-    ppo.train(max_iter=100000, batch_size=256, target_step=4096, lr=1e-4, repeat_times=1)
-    print(ppo.test())
+    args = parser.parse_args()
+    if args.train is not None:
+        if os.path.exists(args.train):
+            configs = yaml.load(open(args.train, 'r'), Loader=yaml.FullLoader)
+            trainer_config = configs.get('trainer', {})
+            train_config = configs.get('train', {})
+            if trainer_config is not None:
+                trainer = module_instance(trainer_config)
+                trainer.train(**train_config)
+            else:
+                print('Trainer config not found')
+        else:
+            print(f'File {args.train} not found')
+    elif args.test is not None:
+        print(f'Test {args.test}')
+        if os.path.exists(args.test):
+            configs = yaml.load(open(args.test, 'r'), Loader=yaml.FullLoader)
+            trainer_config = configs.get('trainer', {})
+            test_config = configs.get('test', {})
+            if trainer_config is not None:
+                trainer = module_instance(trainer_config)
+                trainer.test(**test_config)
+            else:
+                print('Tester config not found')
+    else:
+        print('No command found')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
