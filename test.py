@@ -9,26 +9,26 @@ from games import SnakeGame
 from models.assist import ActorNetwork
 
 
-def run_game(update_mode=50):
+def run_game(update_mode=5):
     screen = pygame.display.set_mode((800, 800))
-    width = 9
-    height = 9
+    width = 16
+    height = 16
     actor_output_dim = 4
     env = SnakeGame(width, height)
-    state_dim = 6
-    hidden_dim = 6 * 4
+    state_dim = width * height * 3
+    hidden_dim = state_dim * 4
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     actor = ActorNetwork(state_dim, hidden_dim, actor_output_dim).to(device)
     state = env.reset().to(device)
-    if os.path.exists('actor.pth'):
-        print('Load model from actor.pth')
-        actor.load_state_dict(torch.load('actor.pth'))
+    if os.path.exists('best_actor.pth'):
+        print('Load model from best_actor.pth')
+        actor.load_state_dict(torch.load('best_actor.pth'))
     i = 1
     while True:
         actor.eval()
-        if os.path.exists('actor.pth') and i % update_mode == 0:
-            print('Load model from actor.pth')
-            actor.load_state_dict(torch.load('actor.pth'))
+        if os.path.exists('best_actor.pth') and i % update_mode == 0:
+            print('Load model from best_actor.pth')
+            actor.load_state_dict(torch.load('best_actor.pth'))
             i += 1
         action, _ = actor.get_action(state)
         state, done, _ = env.step(action.item())

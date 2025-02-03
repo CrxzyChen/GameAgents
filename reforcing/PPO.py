@@ -6,7 +6,7 @@ from .Environment import Environment
 
 
 class PPO:
-    def __init__(self, env: Environment, critic, actor, if_gae: bool = True, max_history_len=1024, gamma=0.99,
+    def __init__(self, env: Environment, critic, actor, if_gae: bool = True, max_history_len=65536, gamma=0.99,
                  lam=0.95, reward_scale=0.99, ratio_clip=0.2, entropy_coeff=0.01, device='cpu'):
         self.env = env
         self.critic = critic
@@ -73,7 +73,7 @@ class PPO:
         if os.path.exists('critic.pth'):
             print('Load model from critic.pth')
             self.critic.load_state_dict(torch.load('critic.pth'))
-
+        best_score = -0.5
         for i in range(max_iter):
 
             # 探索阶段：
@@ -126,11 +126,16 @@ class PPO:
             scores = self.test()
             print(f'Iteration {i}, Average Reward: {scores}')
 
+            if scores > best_score:
+                best_score = scores
+                torch.save(self.actor.state_dict(), 'best_actor.pth')
+                torch.save(self.critic.state_dict(), 'best_critic.pth')
+
             if i % save_iter == 0:
                 torch.save(self.actor.state_dict(), 'actor.pth')
                 torch.save(self.critic.state_dict(), 'critic.pth')
 
-    def test(self, game_rounds=1):
+    def test(self, game_rounds=20):
         self.actor.eval()
         with torch.no_grad():
             scores = []
